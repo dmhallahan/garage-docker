@@ -1,0 +1,94 @@
+docker-compose.yml 
+-----start of docker-compose.yml -----
+app:
+  image: node
+  volumes:
+    - ./:/root/
+  working_dir: /root/
+  command: node app.js
+  ports:
+    - "3000:3000"
+  links:
+    - database
+database:
+  image: neo4j
+-----end of docker-compose.yml-----
+
+In node App:
+index.js:
+var user = process.env.NEO4J_USER || 'neo4j';
+var password = process.env.NEO4J_PASS || 'demo';
+var server = process.env.NEO4J_SERVER || 'localhost';
+var port = process.env.NEO4J_PORT || '7474';
+var store = require('./lib/store')(user, password, server, port);
+
+Dockerfile for Node:
+(See http://seanmcgary.com/posts/deploying-a-nodejs-application-using-docker )
+-----start of Dockerfile-----
+FROM ubuntu:14.04
+# make sure apt is up to date
+RUN apt-get update
+
+# install nodejs, npm and git
+RUN apt-get install -y nodejs npm git git-core
+
+ADD start.sh /tmp/
+
+RUN chmod +x /tmp/start.sh
+
+CMD ./tmp/start.sh
+-----end of Dockerfile-----
+-----start of start.sh-----
+cd /tmp
+
+# try to remove the repo if it already exists
+rm -rf <git repo name>; true
+
+git clone https://secure.bravecs.com/gpresland/15FAT006-Router.git
+
+cd 15FAT006-Router
+
+npm install
+
+node .
+-----end of start.sh-----
+
+Dockerfile for Neo4j:
+(See https://hub.docker.com/r/neo4j/neo4j/ if you want to use the official one, but they are using some flavor of Debian I think)
+
+-----start of Dockerfile-----
+FROM dockerfile/java:oracle-java8
+
+# make sure apt is up to date
+RUN apt-get update
+
+# install nodejs, npm and git
+RUN apt-get install -y wget tar
+
+# Download Neo4j 
+RUN wget http://dist.neo4j.org/neo4j-enterprise-2.2.6-unix.tar.gz \
+         -O /opt/neo4j.tar.gz
+RUN tar -xvzf /opt/neo4j.tar.gz
+RUN rm /opt/neo4j.tar.gz
+RUN mv /neo4j-community-2.2.6/ /opt/neo4j
+
+WORKDIR /opt/neo4j
+
+RUN mv data /data \
+    && ln --symbolic /data
+
+VOLUME /data
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
+# http
+EXPOSE 7474
+# https
+EXPOSE 7473
+# shell
+EXPOSE 1337
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["neo4j"]
+-----end of Dockerfile-----
+For docker-entrypoint.sh see https://github.com/neo4j/docker-neo4j/blob/master/docker-entrypoint.sh

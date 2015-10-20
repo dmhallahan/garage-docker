@@ -1,0 +1,33 @@
+FROM dockerfile/java:oracle-java8
+
+# make sure apt is up to date
+RUN apt-get update
+
+# install nodejs, npm and git
+RUN apt-get install -y wget tar
+
+# Download Neo4j 
+RUN wget http://dist.neo4j.org/neo4j-enterprise-2.2.6-unix.tar.gz \
+         -O /opt/neo4j.tar.gz
+RUN tar -xvzf /opt/neo4j.tar.gz
+RUN rm /opt/neo4j.tar.gz
+RUN mv /neo4j-community-2.2.6/ /opt/neo4j
+
+WORKDIR /opt/neo4j
+
+RUN mv data /data \
+    && ln --symbolic /data
+
+VOLUME /data
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
+# http
+EXPOSE 7474
+# https
+EXPOSE 7473
+# shell
+EXPOSE 1337
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["neo4j"]
